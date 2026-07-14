@@ -26,6 +26,7 @@
 | 3D 表现 | MeshPhysicalMaterial（transmission 0.92）玻璃质感 + RoomEnvironment 环境反射，小球飞入嵌入动画 |
 | 结算演出 | 胜利两波彩带 + 闪光灯；无论胜负，右侧木板抽开逐个揭晓暗码 |
 | 交互 | 点击填球 / 点击移除 / 鼠标拖拽交换位置 / 回车快捷提交，Lucide 图标按钮 |
+| 排行榜 | 通关后弹窗记名留榜，按轮次 → 用时排序（localStorage 本地保存前 50 名，无需账号），点奖杯图标随时查看 |
 | 移动端 | 竖屏自适应布局 + 触屏拖拽，手机可直接玩 |
 | 音效 | WebAudio 合成点击/确认/胜利音效（首次点击后激活，符合浏览器策略） |
 | 工程 | 无构建步骤、无 React/Vue，Three.js r160 已本地化到 `vendor/`，可完全离线运行 |
@@ -72,8 +73,9 @@ python3 -m http.server 8123
 ├── index.html          # 页面骨架、HUD、importmap
 ├── styles.css          # 界面样式（桌面 + 手机竖屏自适应）
 ├── game-logic.js       # 纯逻辑：暗码生成、全对/半对算法、游戏状态机
+├── leaderboard.js      # 纯逻辑：排行榜排序/存取（localStorage，可注入存储测试）
 ├── scene-setup.js      # Three.js 场景：相机、灯光、玻璃球、棋盘、彩带
-├── ui-interaction.js   # Raycaster 点击/拖拽、提交逻辑、WebAudio 音效
+├── ui-interaction.js   # Raycaster 点击/拖拽、提交逻辑、弹窗、WebAudio 音效
 ├── main.js             # 入口：整合模块，驱动 requestAnimationFrame 主循环
 ├── vendor/             # Three.js r160 + RoomEnvironment + Lucide（本地化）
 ├── test/               # Node 单测（游戏逻辑）
@@ -83,10 +85,11 @@ python3 -m http.server 8123
 ## 验证
 
 ```bash
-node test/game-logic.test.mjs
+node test/game-logic.test.mjs   # 全对/半对算法 + 暗码互异性
+node test/leaderboard.test.mjs  # 排行榜排序/截断/损坏兜底
 ```
 
-覆盖全对/半对算法的 7 组边界用例（含重复颜色）与暗码互异性断言。
+游戏逻辑测试覆盖 7 组边界用例（含重复颜色）；排行榜测试覆盖排序优先级、50 条截断、数据损坏兜底等 22 条断言。
 
 ## 部署
 
@@ -99,9 +102,13 @@ node test/game-logic.test.mjs
 
 ## 截图
 
-| 桌面棋盘 | 胜利彩带 | 手机竖屏 |
-| --- | --- | --- |
-| ![桌面](docs/assets/screenshot-desktop.png) | ![胜利](docs/assets/screenshot-win.png) | ![手机](docs/assets/screenshot-mobile.png) |
+| 桌面棋盘 | 胜利彩带 | 通关记名 | 排行榜 |
+| --- | --- | --- | --- |
+| ![桌面](docs/assets/screenshot-desktop.png) | ![胜利](docs/assets/screenshot-win.png) | ![记名](docs/assets/screenshot-winmodal.png) | ![排行榜](docs/assets/screenshot-leaderboard.png) |
+
+| 手机竖屏 |
+| --- |
+| ![手机](docs/assets/screenshot-mobile.png) |
 
 ## 贡献
 
@@ -142,6 +149,7 @@ The classic board game Mastermind (as seen in *Clubhouse Games: 51 Worldwide Cla
 - Glass look via `MeshPhysicalMaterial` (transmission) + `RoomEnvironment` reflections
 - Win: two confetti bursts + flash; win or lose, the board slides away to reveal the secret
 - Click-to-place / click-to-remove / drag-to-swap, Enter to submit, Lucide icon buttons
+- Leaderboard: win → name prompt → local ranking by rounds then time (top 50 in localStorage, no account needed), trophy icon opens it anytime
 - Mobile portrait layout with touch drag; WebAudio-synthesized sound effects
 - No build step, no framework — Three.js r160 is vendored in `vendor/`, runs fully offline
 
@@ -159,10 +167,11 @@ Any static file server works. ES modules + importmap require HTTP — opening `i
 ### Verified by
 
 ```bash
-node test/game-logic.test.mjs
+node test/game-logic.test.mjs   # exact/partial scoring + secret uniqueness
+node test/leaderboard.test.mjs  # leaderboard ordering / cap / corruption fallback
 ```
 
-Covers 7 edge cases of the exact/partial scoring algorithm (including duplicate colors) plus secret-code uniqueness.
+Covers 7 edge cases of the exact/partial scoring algorithm (including duplicate colors) plus secret-code uniqueness, and 22 leaderboard assertions.
 
 ### Limits
 

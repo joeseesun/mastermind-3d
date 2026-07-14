@@ -72,7 +72,34 @@
     <button id="btn-clear" title="清空本轮" aria-label="清空本轮"><i data-icon="eraser"></i></button>
     <button id="btn-restart" title="重新开始" aria-label="重新开始"><i data-icon="rotate-ccw"></i></button>
     <button id="btn-difficulty" title="切换暗码位数（4 / 5）" aria-label="切换难度"><i data-icon="hash"></i><span class="num">4</span></button>
+    <button id="btn-leaderboard" title="排行榜" aria-label="排行榜"><i data-icon="trophy"></i></button>
     <button id="btn-rules" title="游戏规则" aria-label="游戏规则"><i data-icon="info"></i></button>
+  </div>
+
+  <!-- 通关弹窗：输入名字记录成绩 -->
+  <div id="win-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3><i data-icon="trophy"></i> 通关！</h3>
+      <p id="win-stats" class="modal-sub"></p>
+      <input id="win-name" type="text" maxlength="12" placeholder="输入你的名字" autocomplete="off" />
+      <div class="modal-actions">
+        <button id="btn-save-score" class="primary">保存成绩</button>
+        <button id="btn-skip-score">跳过</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 排行榜弹窗 -->
+  <div id="lb-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3><i data-icon="trophy"></i> 排行榜</h3>
+      <p class="modal-sub">轮次越少、用时越短，排名越靠前</p>
+      <div id="lb-list"></div>
+      <div class="modal-actions">
+        <button id="btn-lb-clear" class="danger"><i data-icon="trash-2"></i> 清空</button>
+        <button id="btn-lb-close" class="primary">关闭</button>
+      </div>
+    </div>
   </div>
 
   <!-- 结算横幅 -->

@@ -7,6 +7,13 @@ import * as THREE from 'three';
 import { COLORS, MAX_ATTEMPTS } from './game-logic.js';
 import { Easing, LAYOUT } from './scene-setup.js';
 import { renderIcons } from './vendor/lucide-icons.js';
+import {
+  NAME_KEY,
+  formatTime,
+  loadEntries,
+  saveEntry,
+  clearEntries,
+} from './leaderboard.js';
 
 /** 简易音效合成器（首次用户点击时才创建 AudioContext，符合浏览器策略） */
 class SoundFX {
@@ -67,12 +74,13 @@ export class InteractionController {
    * @param {Function} opts.onRestart 重开回调（由 main.js 提供）
    * @param {Function} opts.onToggleDifficulty 切换难度回调（由 main.js 提供）
    */
-  constructor({ sceneManager, game, dom, onRestart, onToggleDifficulty }) {
+  constructor({ sceneManager, game, dom, onRestart, onToggleDifficulty, getElapsed }) {
     this.sm = sceneManager;
     this.game = game;
     this.dom = dom;
     this.onRestart = onRestart;
     this.onToggleDifficulty = onToggleDifficulty;
+    this.getElapsed = getElapsed || (() => 0); // 本局已用秒数（main.js 提供）
 
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2(999, 999); // 初始置于画面外
@@ -111,10 +119,41 @@ export class InteractionController {
     );
     this.dom.btnDifficulty.addEventListener('click', () => this.onToggleDifficulty());
 
-    // 回车快捷提交
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.confirmGuess();
+    // 排行榜弹窗
+    this.dom.btnLeaderboard.addEventListener('click', () => this.openLeaderboard());
+    this.dom.btnLbClose.addEventListener('click', () => this.closeLeaderboard());
+    this.dom.btnLbClear.addEventListener('click', () => this.onClearLeaderboard());
+    // 点击遮罩空白处关闭排行榜（卡片本体不响应）
+    this.dom.lbModal.addEventListener('click', (e) => {
+      if (e.target === this.dom.lbModal) this.closeLeaderboard();
     });
+
+    // 通关记名弹窗
+    this.dom.btnSaveScore.addEventListener('click', () => this.saveScore());
+    this.dom.btnSkipScore.addEventListener('click', () => this.closeWinModal());
+    // 输入框里回车 = 保存
+    this.dom.winName.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.saveScore();
+      e.stopPropagation(); // 不触发全局回车提交
+    });
+
+    // 回车快捷提交 / Esc 关闭排行榜
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.closeLeaderboard();
+      if (e.key !== 'Enter') return;
+      // 弹窗打开时不触发表盘提交（通关弹窗的 Enter 由输入框自己处理）
+      if (!this.dom.lbModal.classList.contains('hidden')) return;
+      if (!this.dom.winModal.classList.contains('hidden')) return;
+      this.confirmGuess();
+    });
+  }
+
+  /** 排行榜/通关弹窗是否正开着 */
+  isModalOpen() {
+    return (
+      !this.dom.lbModal.classList.contains('hidden') ||
+      !this.dom.winModal.classList.contains('hidden')
+    );
   }
 
   updatePointerNDC(e) {
@@ -381,12 +420,9 @@ export class InteractionController {
     if (this.game.status === 'won') {
       this.sm.celebrate(submittedBalls);
       this.sound.win();
-      // 胜利同样抽开木板、揭晓暗码；横幅等揭晓完成后弹出
+      // 胜利同样抽开木板、揭晓暗码；揭晓完成后弹出记名弹窗
       const revealMs = this.sm.revealAnswer(this.game.secret);
-      setTimeout(
-        () => this.showBanner(`通关！你在第 ${this.game.history.length} 轮猜出了暗码！`, 'trophy'),
-        revealMs
-      );
+      setTimeout(() => this.showWinModal(), revealMs);
     } else if (this.game.status === 'lost') {
       // 先抽开木板、逐个揭晓暗码，全部展示完后再弹出结算
       const revealMs = this.sm.revealAnswer(this.game.secret);
@@ -400,6 +436,105 @@ export class InteractionController {
       (icon ? `<i data-icon="${icon}"></i>` : '') + `<span>${text}</span>`;
     renderIcons(this.dom.bannerText);
     this.dom.banner.classList.remove('hidden');
+  }
+
+  // ---------- 通关记名弹窗 ----------
+  /** 揭晓动画播完后弹出：展示本局成绩，预填上次用过的名字 */
+  showWinModal() {
+    const rounds = this.game.history.length;
+    const seconds = this.getElapsed();
+    this.dom.winStats.textContent = `第 ${rounds} 轮猜出 · 用时 ${formatTime(seconds)} · ${this.game.codeLength} 位暗码`;
+    this.dom.winName.value = localStorage.getItem(NAME_KEY) || '';
+    this.dom.winModal.classList.remove('hidden');
+    this.dom.winName.focus();
+    this.dom.winName.select();
+  }
+
+  /** 保存成绩到排行榜，横幅里带上名次 */
+  saveScore() {
+    const name = this.dom.winName.value.trim() || '无名氏';
+    localStorage.setItem(NAME_KEY, name);
+    const rank = saveEntry({
+      name,
+      rounds: this.game.history.length,
+      seconds: this.getElapsed(),
+      codeLength: this.game.codeLength,
+      date: Date.now(),
+    });
+    this.closeWinModal(
+      rank >= 0
+        ? `通关！第 ${this.game.history.length} 轮猜出暗码，排行榜第 ${rank + 1} 名！`
+        : null
+    );
+  }
+
+  /** 关闭弹窗并弹出结算横幅（可带自定义文案，如名次） */
+  closeWinModal(customText = null) {
+    this.dom.winModal.classList.add('hidden');
+    this.showBanner(
+      customText || `通关！你在第 ${this.game.history.length} 轮猜出了暗码！`,
+      'trophy'
+    );
+  }
+
+  // ---------- 排行榜弹窗 ----------
+  openLeaderboard() {
+    this.renderLeaderboard();
+    this.dom.lbModal.classList.remove('hidden');
+  }
+
+  closeLeaderboard() {
+    this.dom.lbModal.classList.add('hidden');
+    // 关闭时把"清空"按钮复位（可能处于二次确认态）
+    const btn = this.dom.btnLbClear;
+    btn.classList.remove('armed');
+    btn.innerHTML = '<i data-icon="trash-2"></i> 清空';
+    renderIcons(btn);
+  }
+
+  /** 清空需二次确认：第一次点击变红提示，3 秒内再点才真正清空 */
+  onClearLeaderboard() {
+    const btn = this.dom.btnLbClear;
+    if (!btn.classList.contains('armed')) {
+      btn.classList.add('armed');
+      btn.textContent = '再点一次确认清空';
+      clearTimeout(this._clearTimer);
+      this._clearTimer = setTimeout(() => {
+        btn.classList.remove('armed');
+        btn.innerHTML = '<i data-icon="trash-2"></i> 清空';
+        renderIcons(btn);
+      }, 3000);
+      return;
+    }
+    clearTimeout(this._clearTimer);
+    clearEntries();
+    btn.classList.remove('armed');
+    btn.innerHTML = '<i data-icon="trash-2"></i> 清空';
+    renderIcons(btn);
+    this.renderLeaderboard();
+  }
+
+  /** 渲染榜单（名次 / 名字 / 轮次 / 用时 / 难度） */
+  renderLeaderboard() {
+    const entries = loadEntries();
+    if (!entries.length) {
+      this.dom.lbList.innerHTML = '<div class="lb-empty">还没有通关记录，快来拿下第一名！</div>';
+      return;
+    }
+    this.dom.lbList.innerHTML = entries
+      .map(
+        (e, i) => `<div class="lb-row">
+          <span class="lb-rank">${i + 1}</span>
+          <span class="lb-name"></span>
+          <span class="lb-rounds">${e.rounds} 轮</span>
+          <span class="lb-time">${formatTime(e.seconds)}</span>
+          <span class="lb-diff">${e.codeLength} 位</span>
+        </div>`
+      )
+      .join('');
+    // 名字用 textContent 注入，防止 HTML 注入
+    const names = this.dom.lbList.querySelectorAll('.lb-name');
+    entries.forEach((e, i) => (names[i].textContent = e.name));
   }
 
   // ---------- HUD ----------
@@ -423,6 +558,7 @@ export class InteractionController {
     this.dragging = null;
     this.dom.canvas.style.cursor = 'default';
     this.dom.banner.classList.add('hidden');
+    this.dom.winModal.classList.add('hidden'); // 结算弹窗一并收起
     this.refreshHud();
     this.refreshConfirmState();
   }

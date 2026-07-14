@@ -22,6 +22,16 @@ const dom = {
   banner: document.getElementById('banner'),
   bannerText: document.getElementById('banner-text'),
   btnAgain: document.getElementById('btn-again'),
+  btnLeaderboard: document.getElementById('btn-leaderboard'),
+  winModal: document.getElementById('win-modal'),
+  winStats: document.getElementById('win-stats'),
+  winName: document.getElementById('win-name'),
+  btnSaveScore: document.getElementById('btn-save-score'),
+  btnSkipScore: document.getElementById('btn-skip-score'),
+  lbModal: document.getElementById('lb-modal'),
+  lbList: document.getElementById('lb-list'),
+  btnLbClear: document.getElementById('btn-lb-clear'),
+  btnLbClose: document.getElementById('btn-lb-close'),
 };
 
 // 渲染静态图标（<i data-icon="..."> → 内联 SVG）
@@ -29,6 +39,9 @@ renderIcons();
 
 // 当前难度（暗码位数）：4 = 标准，5 = 困难
 let difficulty = 4;
+
+// 本局开始时间（用于排行榜计时，重开时归零）
+let startedAt = Date.now();
 
 // 初始化三大模块
 const game = new MastermindGame(difficulty);
@@ -40,6 +53,7 @@ const interaction = new InteractionController({
   game,
   dom,
   onRestart: restart,
+  getElapsed: () => Math.round((Date.now() - startedAt) / 1000), // 本局已用秒数
   onToggleDifficulty: () => {
     difficulty = difficulty === 4 ? 5 : 4;
     dom.btnDifficulty.querySelector('.num').textContent = difficulty;
@@ -51,6 +65,7 @@ const interaction = new InteractionController({
 function restart() {
   game.reset(difficulty);
   sm.buildGame(difficulty);
+  startedAt = Date.now(); // 计时归零
   interaction.resetForNewGame();
 }
 
