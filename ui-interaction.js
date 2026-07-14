@@ -7,13 +7,7 @@ import * as THREE from 'three';
 import { COLORS, MAX_ATTEMPTS } from './game-logic.js';
 import { Easing, LAYOUT } from './scene-setup.js';
 import { renderIcons } from './vendor/lucide-icons.js';
-import {
-  NAME_KEY,
-  formatTime,
-  loadEntries,
-  saveEntry,
-  clearEntries,
-} from './leaderboard.js';
+import { NAME_KEY, formatTime, fetchEntries, postEntry } from './leaderboard.js';
 
 /** 简易音效合成器（首次用户点击时才创建 AudioContext，符合浏览器策略） */
 class SoundFX {
@@ -122,7 +116,6 @@ export class InteractionController {
     // 排行榜弹窗
     this.dom.btnLeaderboard.addEventListener('click', () => this.openLeaderboard());
     this.dom.btnLbClose.addEventListener('click', () => this.closeLeaderboard());
-    this.dom.btnLbClear.addEventListener('click', () => this.onClearLeaderboard());
     // 点击遮罩空白处关闭排行榜（卡片本体不响应）
     this.dom.lbModal.addEventListener('click', (e) => {
       if (e.target === this.dom.lbModal) this.closeLeaderboard();
@@ -450,22 +443,32 @@ export class InteractionController {
     this.dom.winName.select();
   }
 
-  /** 保存成绩到排行榜，横幅里带上名次 */
-  saveScore() {
+  /** 保存成绩到云端排行榜，横幅里带上名次 */
+  async saveScore() {
     const name = this.dom.winName.value.trim() || '无名氏';
     localStorage.setItem(NAME_KEY, name);
-    const rank = saveEntry({
-      name,
-      rounds: this.game.history.length,
-      seconds: this.getElapsed(),
-      codeLength: this.game.codeLength,
-      date: Date.now(),
-    });
-    this.closeWinModal(
-      rank >= 0
-        ? `通关！第 ${this.game.history.length} 轮猜出暗码，排行榜第 ${rank + 1} 名！`
-        : null
-    );
+    const btn = this.dom.btnSaveScore;
+    btn.disabled = true;
+    btn.textContent = '保存中…';
+    const rounds = this.game.history.length;
+    let text;
+    try {
+      const { rank } = await postEntry({
+        name,
+        rounds,
+        seconds: this.getElapsed(),
+        codeLength: this.game.codeLength,
+      });
+      text =
+        rank >= 0
+          ? `通关！第 ${rounds} 轮猜出暗码，排行榜第 ${rank + 1} 名！`
+          : `通关！第 ${rounds} 轮猜出暗码！（未进前 10 名）`;
+    } catch {
+      text = `通关！第 ${rounds} 轮猜出暗码！（排行榜连接失败，成绩未记录）`;
+    }
+    btn.disabled = false;
+    btn.textContent = '保存成绩';
+    this.closeWinModal(text);
   }
 
   /** 关闭弹窗并弹出结算横幅（可带自定义文案，如名次） */
@@ -485,38 +488,18 @@ export class InteractionController {
 
   closeLeaderboard() {
     this.dom.lbModal.classList.add('hidden');
-    // 关闭时把"清空"按钮复位（可能处于二次确认态）
-    const btn = this.dom.btnLbClear;
-    btn.classList.remove('armed');
-    btn.innerHTML = '<i data-icon="trash-2"></i> 清空';
-    renderIcons(btn);
   }
 
-  /** 清空需二次确认：第一次点击变红提示，3 秒内再点才真正清空 */
-  onClearLeaderboard() {
-    const btn = this.dom.btnLbClear;
-    if (!btn.classList.contains('armed')) {
-      btn.classList.add('armed');
-      btn.textContent = '再点一次确认清空';
-      clearTimeout(this._clearTimer);
-      this._clearTimer = setTimeout(() => {
-        btn.classList.remove('armed');
-        btn.innerHTML = '<i data-icon="trash-2"></i> 清空';
-        renderIcons(btn);
-      }, 3000);
+  /** 从云端拉取并渲染榜单（名次 / 名字 / 轮次 / 用时 / 难度） */
+  async renderLeaderboard() {
+    this.dom.lbList.innerHTML = '<div class="lb-empty">加载中…</div>';
+    let entries;
+    try {
+      entries = await fetchEntries();
+    } catch {
+      this.dom.lbList.innerHTML = '<div class="lb-empty">排行榜暂时不可用，稍后再试</div>';
       return;
     }
-    clearTimeout(this._clearTimer);
-    clearEntries();
-    btn.classList.remove('armed');
-    btn.innerHTML = '<i data-icon="trash-2"></i> 清空';
-    renderIcons(btn);
-    this.renderLeaderboard();
-  }
-
-  /** 渲染榜单（名次 / 名字 / 轮次 / 用时 / 难度） */
-  renderLeaderboard() {
-    const entries = loadEntries();
     if (!entries.length) {
       this.dom.lbList.innerHTML = '<div class="lb-empty">还没有通关记录，快来拿下第一名！</div>';
       return;

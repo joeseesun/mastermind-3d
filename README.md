@@ -26,7 +26,7 @@
 | 3D 表现 | MeshPhysicalMaterial（transmission 0.92）玻璃质感 + RoomEnvironment 环境反射，小球飞入嵌入动画 |
 | 结算演出 | 胜利两波彩带 + 闪光灯；无论胜负，右侧木板抽开逐个揭晓暗码 |
 | 交互 | 点击填球 / 点击移除 / 鼠标拖拽交换位置 / 回车快捷提交，Lucide 图标按钮 |
-| 排行榜 | 通关后弹窗记名留榜，按轮次 → 用时排序（localStorage 本地保存前 50 名，无需账号），点奖杯图标随时查看 |
+| 排行榜 | 通关后弹窗记名留榜，云端排行（同源 `/api`，按轮次 → 用时排序，仅保留前 10 名，新成绩进榜会挤掉第 10 名），点奖杯图标随时查看 |
 | 移动端 | 竖屏自适应布局 + 触屏拖拽，手机可直接玩 |
 | 音效 | WebAudio 合成点击/确认/胜利音效（首次点击后激活，符合浏览器策略） |
 | 工程 | 无构建步骤、无 React/Vue，Three.js r160 已本地化到 `vendor/`，可完全离线运行 |
@@ -73,27 +73,38 @@ python3 -m http.server 8123
 ├── index.html          # 页面骨架、HUD、importmap
 ├── styles.css          # 界面样式（桌面 + 手机竖屏自适应）
 ├── game-logic.js       # 纯逻辑：暗码生成、全对/半对算法、游戏状态机
-├── leaderboard.js      # 纯逻辑：排行榜排序/存取（localStorage，可注入存储测试）
+├── leaderboard.js      # 排行榜客户端：排序/格式化纯函数 + /api 拉取与提交
 ├── scene-setup.js      # Three.js 场景：相机、灯光、玻璃球、棋盘、彩带
 ├── ui-interaction.js   # Raycaster 点击/拖拽、提交逻辑、弹窗、WebAudio 音效
 ├── main.js             # 入口：整合模块，驱动 requestAnimationFrame 主循环
+├── server/             # 云端排行榜 API（Node 零依赖，JSON 文件存储）
 ├── vendor/             # Three.js r160 + RoomEnvironment + Lucide（本地化）
-├── test/               # Node 单测（游戏逻辑）
+├── test/               # Node 单测（游戏逻辑 + 排行榜纯函数 + API 集成）
 └── docs/assets/        # README 截图
 ```
 
 ## 验证
 
 ```bash
-node test/game-logic.test.mjs   # 全对/半对算法 + 暗码互异性
-node test/leaderboard.test.mjs  # 排行榜排序/截断/损坏兜底
+node test/game-logic.test.mjs      # 全对/半对算法 + 暗码互异性
+node test/leaderboard.test.mjs     # 排行榜纯函数（排序/格式化）
+node test/leaderboard-api.test.mjs # 排行榜 API 集成（起真实服务进程）
 ```
 
-游戏逻辑测试覆盖 7 组边界用例（含重复颜色）；排行榜测试覆盖排序优先级、50 条截断、数据损坏兜底等 22 条断言。
+游戏逻辑测试覆盖 7 组边界用例（含重复颜色）；排行榜测试覆盖排序优先级、前 10 名截断与挤出、非法数据校验、名字清洗、持久化等 30+ 条断言。
 
 ## 部署
 
-纯静态站点，扔到任何静态托管即可（Vercel、Netlify、GitHub Pages、Nginx static root）。本站示例使用 Nginx static root，无 Docker、无后端依赖。
+游戏本体是纯静态站点，扔到任何静态托管即可（Vercel、Netlify、GitHub Pages、Nginx static root）。**没有排行榜 API 也能玩**：接口不可用时榜单会提示"暂时不可用"，不影响游戏。
+
+云端排行榜（可选）：`server/mastermind-lb.js` 是零依赖 Node 服务（JSON 文件存储，前 10 名截断、名字清洗、限流），用 systemd 常驻在本机私有端口，再让 Nginx 把 `/api/` 反代过去即可：
+
+```bash
+PORT=3091 DATA_FILE=/path/to/leaderboard.json node server/mastermind-lb.js
+# nginx: location /api/ { proxy_pass http://127.0.0.1:3091; }
+```
+
+本站示例：Nginx static root + systemd 服务，无 Docker。
 
 ## 限制
 
@@ -149,7 +160,7 @@ The classic board game Mastermind (as seen in *Clubhouse Games: 51 Worldwide Cla
 - Glass look via `MeshPhysicalMaterial` (transmission) + `RoomEnvironment` reflections
 - Win: two confetti bursts + flash; win or lose, the board slides away to reveal the secret
 - Click-to-place / click-to-remove / drag-to-swap, Enter to submit, Lucide icon buttons
-- Leaderboard: win → name prompt → local ranking by rounds then time (top 50 in localStorage, no account needed), trophy icon opens it anytime
+- Leaderboard: win → name prompt → cloud ranking by rounds then time (top 10 kept, new scores squeeze #10 out), trophy icon opens it anytime. Zero-dependency Node service in `server/` with JSON-file storage; the game still works when the API is down
 - Mobile portrait layout with touch drag; WebAudio-synthesized sound effects
 - No build step, no framework — Three.js r160 is vendored in `vendor/`, runs fully offline
 
@@ -164,14 +175,17 @@ python3 -m http.server 8123
 
 Any static file server works. ES modules + importmap require HTTP — opening `index.html` via `file://` will not work.
 
+Optional cloud leaderboard: `PORT=3091 node server/mastermind-lb.js`, then reverse-proxy `/api/` to it (see the Chinese deployment section for details). The game degrades gracefully without it.
+
 ### Verified by
 
 ```bash
-node test/game-logic.test.mjs   # exact/partial scoring + secret uniqueness
-node test/leaderboard.test.mjs  # leaderboard ordering / cap / corruption fallback
+node test/game-logic.test.mjs      # exact/partial scoring + secret uniqueness
+node test/leaderboard.test.mjs     # leaderboard pure functions
+node test/leaderboard-api.test.mjs # leaderboard API integration (spawns real server)
 ```
 
-Covers 7 edge cases of the exact/partial scoring algorithm (including duplicate colors) plus secret-code uniqueness, and 22 leaderboard assertions.
+Covers 7 edge cases of the exact/partial scoring algorithm (including duplicate colors) plus secret-code uniqueness, and 30+ leaderboard assertions (ordering, top-10 squeeze-out, validation, name sanitizing, persistence).
 
 ### Limits
 

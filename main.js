@@ -30,7 +30,6 @@ const dom = {
   btnSkipScore: document.getElementById('btn-skip-score'),
   lbModal: document.getElementById('lb-modal'),
   lbList: document.getElementById('lb-list'),
-  btnLbClear: document.getElementById('btn-lb-clear'),
   btnLbClose: document.getElementById('btn-lb-close'),
 };
 
