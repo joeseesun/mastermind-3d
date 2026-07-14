@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Mastermind 3D · 猜颜色</title>
+  <meta name="description" content="Mastermind 3D · 猜颜色：Three.js 打造的 3D 玻璃球推理游戏。8 轮内破解 4 位（困难模式 5 位）彩色暗码，支持拖拽交换、手机触屏，开源免费。" />
+  <meta name="keywords" content="Mastermind,猜颜色,3D,Three.js,益智游戏,桌游,推理,开源" />
+  <link rel="canonical" href="https://mastermind.qiaomu.ai/" />
+  <meta name="theme-color" content="#0b0f16" />
+  <!-- Open Graph / 分享卡片 -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Mastermind 3D" />
+  <meta property="og:title" content="Mastermind 3D · 猜颜色" />
+  <meta property="og:description" content="Three.js 3D 玻璃球推理游戏：8 轮内破解彩色暗码，支持拖拽交换与手机触屏。" />
+  <meta property="og:url" content="https://mastermind.qiaomu.ai/" />
+  <meta property="og:image" content="https://mastermind.qiaomu.ai/assets/og-cover.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Mastermind 3D · 猜颜色" />
+  <meta name="twitter:description" content="Three.js 3D 玻璃球推理游戏：8 轮内破解彩色暗码。" />
+  <meta name="twitter:image" content="https://mastermind.qiaomu.ai/assets/og-cover.jpg" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <!-- Umami 统计（自建实例，隐私友好） -->
+  <script defer src="https://umami.qiaomu.ai/script.js" data-website-id="664b952a-b5bd-4f48-bf03-a6df4ac49a28" data-domains="mastermind.qiaomu.ai"></script>
+  <link rel="stylesheet" href="./styles.css" />
+  <!--
+    Three.js 依赖（r160）已本地化到 vendor/ 目录，无需联网。
+    如需改回 CDN，把下面两个路径换成：
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three.module.js",
+      "three/addons/": "./vendor/addons/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <!-- 顶部信息栏 -->
+  <div id="hud">
+    <div class="title"><i data-icon="target"></i><span>Mastermind 3D · 猜颜色</span></div>
+    <div class="stats">
+      <span>第 <b id="round">1</b> / 8 轮</span>
+      <span>剩余 <b id="left">8</b> 次</span>
+    </div>
+  </div>
+
+  <!-- 规则面板（默认隐藏，点信息按钮展开） -->
+  <div id="rules" class="hidden">
+    <h3><i data-icon="book-open"></i> 游戏规则</h3>
+    <ol>
+      <li>系统随机生成 4 位（困难模式 5 位）暗码，由 7 色玻璃球组成，<b>暗码中每种颜色至多出现一次</b>（你的猜测允许重复），藏在右侧木板后。</li>
+      <li>点击底部托盘里的彩色样本球，小球会飞入当前列最上方的空槽（从上往下填）；点击已放入的球可移除。</li>
+      <li>放满后点确认按钮，列上方出现反馈小圆点（不对应具体位置）：<br />
+        <span class="dot" style="background:#ff2b2b;"></span>红 = 颜色和位置全对<br />
+        <span class="dot" style="background:#f2f2f2;"></span>白 = 颜色对但位置错
+      </li>
+      <li>8 轮内全部猜中即通关；否则木板抽开、逐个揭晓暗码。</li>
+    </ol>
+  </div>
+
+  <!-- 底部控制栏（图标按钮） -->
+  <div id="controls">
+    <button id="btn-confirm" title="确认本轮（回车）" aria-label="确认本轮" disabled><i data-icon="check"></i><span>我确认</span></button>
+    <button id="btn-clear" title="清空本轮" aria-label="清空本轮"><i data-icon="eraser"></i></button>
+    <button id="btn-restart" title="重新开始" aria-label="重新开始"><i data-icon="rotate-ccw"></i></button>
+    <button id="btn-difficulty" title="切换暗码位数（4 / 5）" aria-label="切换难度"><i data-icon="hash"></i><span class="num">4</span></button>
+    <button id="btn-rules" title="游戏规则" aria-label="游戏规则"><i data-icon="info"></i></button>
+  </div>
+
+  <!-- 结算横幅 -->
+  <div id="banner" class="hidden">
+    <div id="banner-text"></div>
+    <button id="btn-again">再来一局</button>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

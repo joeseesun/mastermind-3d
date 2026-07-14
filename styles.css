@@ -1,0 +1,336 @@
+/* =============================================================
+   styles.css — HTML 叠加层样式（卡通游戏风按钮 + 暗色面板）
+   ============================================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0b0f16;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
+    'Segoe UI', sans-serif;
+  color: #fff;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  /* 触屏拖拽时禁止页面滚动/缩放手势，防止选中 */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 顶部信息栏 */
+#hud {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: rgba(12, 16, 24, 0.72);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  user-select: none;
+}
+
+#hud .title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+#hud .title svg {
+  width: 20px;
+  height: 20px;
+  color: #ffe600;
+}
+
+#hud .stats {
+  margin-top: 6px;
+  font-size: 14px;
+  display: flex;
+  gap: 16px;
+  opacity: 0.9;
+}
+
+#hud b {
+  color: #ffe600;
+}
+
+/* 规则面板 */
+#rules {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 300px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  border-radius: 14px;
+  background: rgba(12, 16, 24, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 5;
+}
+
+#rules h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+
+#rules h3 svg {
+  width: 16px;
+  height: 16px;
+}
+
+#rules ol {
+  padding-left: 18px;
+}
+
+#rules li {
+  margin-bottom: 4px;
+}
+
+#rules .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* 底部控制栏 */
+#controls {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 20px;
+  background: rgba(12, 16, 24, 0.72);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 5;
+}
+
+/* 卡通游戏按钮：厚底边 + 按压下沉；默认统一灰色，不抢主按钮视觉 */
+#controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 52px;
+  height: 52px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 16px;
+  background: #64748b;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  flex-shrink: 0; /* 窄屏下按钮不被压缩变形 */
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.08s, box-shadow 0.08s, filter 0.15s;
+}
+
+#controls button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+#controls button:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+#controls button:disabled {
+  filter: grayscale(0.85) brightness(0.65);
+  cursor: not-allowed;
+}
+
+#controls svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* 主按钮：默认灰（禁用态），球填满后绿色高亮 */
+#btn-confirm {
+  min-width: 0;
+  padding: 0 16px;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap; /* "我确认" 文字不换行 */
+}
+
+#btn-confirm:not(:disabled) {
+  background: #22c55e;
+}
+
+#btn-difficulty {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+#btn-difficulty svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* 结算横幅：左上角浮层，不遮挡棋盘；容器不拦截鼠标，仅按钮可点 */
+#banner {
+  position: fixed;
+  top: 92px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(12, 16, 24, 0.78);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 10;
+  pointer-events: none;
+}
+
+#banner-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+
+#banner-text svg {
+  width: 28px;
+  height: 28px;
+  color: #ffe600;
+}
+
+#banner button {
+  pointer-events: auto;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  padding: 8px 18px;
+  background: #3b82f6;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.08s, box-shadow 0.08s, filter 0.15s;
+}
+
+#banner button:hover {
+  filter: brightness(1.12);
+}
+
+#banner button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ---------- 手机端适配（窄屏） ---------- */
+@media (max-width: 520px) {
+  #hud {
+    top: 10px;
+    left: 10px;
+    padding: 8px 12px;
+  }
+
+  #hud .title {
+    font-size: 14px;
+  }
+
+  #hud .title svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  #hud .stats {
+    font-size: 12px;
+    gap: 10px;
+  }
+
+  #controls {
+    gap: 8px;
+    padding: 10px;
+    bottom: 10px;
+  }
+
+  #controls button {
+    min-width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    padding: 0 10px;
+  }
+
+  #controls svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  #controls #btn-confirm {
+    min-width: 0;
+    padding: 0 14px;
+    font-size: 15px;
+  }
+
+  #btn-difficulty {
+    font-size: 17px;
+  }
+
+  /* 规则面板改为底部抽屉，避免挡住顶部信息栏 */
+  #rules {
+    top: auto;
+    right: 16px;
+    left: 16px;
+    bottom: 74px;
+    width: auto;
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+
+  #banner {
+    top: 70px;
+    left: 10px;
+    max-width: calc(100vw - 20px);
+    padding: 10px 12px;
+  }
+
+  #banner-text {
+    font-size: 15px;
+  }
+
+  #banner-text svg {
+    width: 22px;
+    height: 22px;
+  }
+}
