@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { COLORS, MAX_ATTEMPTS } from './game-logic.js';
 import { Easing, LAYOUT } from './scene-setup.js';
 import { renderIcons } from './vendor/lucide-icons.js';
-import { NAME_KEY, formatTime, fetchEntries, postEntry } from './leaderboard.js';
+import { NAME_KEY, formatTime, getCachedEntries, fetchEntries, postEntry } from './leaderboard.js';
 
 /** 简易音效合成器（首次用户点击时才创建 AudioContext，符合浏览器策略） */
 class SoundFX {
@@ -490,16 +490,28 @@ export class InteractionController {
     this.dom.lbModal.classList.add('hidden');
   }
 
-  /** 从云端拉取并渲染榜单（名次 / 名字 / 轮次 / 用时 / 难度） */
+  /** 打开弹窗：有缓存先秒渲染，再后台静默刷新；无缓存才显示加载态 */
   async renderLeaderboard() {
-    this.dom.lbList.innerHTML = '<div class="lb-empty">加载中…</div>';
-    let entries;
-    try {
-      entries = await fetchEntries();
-    } catch {
-      this.dom.lbList.innerHTML = '<div class="lb-empty">排行榜暂时不可用，稍后再试</div>';
-      return;
+    const cached = getCachedEntries();
+    if (cached) {
+      this.paintLeaderboard(cached);
+    } else {
+      this.dom.lbList.innerHTML = '<div class="lb-empty">加载中…</div>';
     }
+    try {
+      const entries = await fetchEntries();
+      // 弹窗仍开着才刷新内容（用户可能已关闭）
+      if (!this.dom.lbModal.classList.contains('hidden')) this.paintLeaderboard(entries);
+    } catch {
+      if (!cached) {
+        this.dom.lbList.innerHTML = '<div class="lb-empty">排行榜暂时不可用，稍后再试</div>';
+      }
+      // 有缓存时静默失败：继续展示稍旧的榜单
+    }
+  }
+
+  /** 渲染榜单行（名次 / 名字 / 轮次 / 用时 / 难度） */
+  paintLeaderboard(entries) {
     if (!entries.length) {
       this.dom.lbList.innerHTML = '<div class="lb-empty">还没有通关记录，快来拿下第一名！</div>';
       return;

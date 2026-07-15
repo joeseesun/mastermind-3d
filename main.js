@@ -7,6 +7,7 @@ import { MastermindGame } from './game-logic.js';
 import { SceneManager } from './scene-setup.js';
 import { InteractionController } from './ui-interaction.js';
 import { renderIcons } from './vendor/lucide-icons.js';
+import { prefetchLeaderboard } from './leaderboard.js';
 
 // 收集 HTML 叠加层元素
 const dom = {
@@ -77,6 +78,9 @@ resize();
 
 // 调试钩子：方便在浏览器控制台查看状态或做自动化测试
 window.__mm = { game, sm, interaction };
+
+// 页面加载后预热排行榜缓存：点开 trophy 图标时无需等待跨海请求
+prefetchLeaderboard();
 
 // 主循环：补间/彩带更新 → 悬停检测 → 渲染
 const clock = new THREE.Clock();
